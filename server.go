@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -100,9 +101,40 @@ func (h *coasterHandlers) post(w http.ResponseWriter, r *http.Request) {
 	defer h.Unlock()
 }
 
+func (h *coasterHandlers) getCoaster(w http.ResponseWriter, r *http.Request) {
+
+	parts := strings.Split(r.URL.String(), "/")
+	if len(parts) != 3 {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	h.Lock()
+
+	coaster, ok := h.store[parts[2]]
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	h.Unlock()
+
+	jsonBytes, err := json.Marshal(coaster)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.Header().Add("content-type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonBytes)
+}
+
 func main() {
 	coasterHandlers := newCoasterHandlers()
 	http.HandleFunc("/coasters", coasterHandlers.coasters)
+	http.HandleFunc("/coasters/", coasterHandlers.getCoaster)
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		panic(err)
