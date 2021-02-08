@@ -48,12 +48,12 @@ func (h *coasterHandlers) get(w http.ResponseWriter, r *http.Request) {
 	coasters := make([]Coaster, len(h.store))
 
 	h.Lock()
+	defer h.Unlock()
 	i := 0
 	for _, coaster := range h.store {
 		coasters[i] = coaster
 		i++
 	}
-	h.Unlock()
 
 	jsonBytes, err := json.Marshal(coasters)
 	if err != nil {
@@ -95,10 +95,9 @@ func (h *coasterHandlers) post(w http.ResponseWriter, r *http.Request) {
 	coaster.ID = fmt.Sprintf("%d", time.Now().UnixNano())
 
 	h.Lock()
+	defer h.Unlock()
 
 	h.store[coaster.ID] = coaster
-
-	defer h.Unlock()
 }
 
 func (h *coasterHandlers) getCoaster(w http.ResponseWriter, r *http.Request) {
@@ -109,15 +108,16 @@ func (h *coasterHandlers) getCoaster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println(parts[2])
+
 	h.Lock()
+	defer h.Unlock()
 
 	coaster, ok := h.store[parts[2]]
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-
-	h.Unlock()
 
 	jsonBytes, err := json.Marshal(coaster)
 	if err != nil {
